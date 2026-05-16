@@ -378,16 +378,18 @@ class _CameraScreenState extends State<CameraScreen>
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       // History Icon
-                      BouncingButton(
-                        onTap: () {
-                          if (_history.isNotEmpty) _openPhoto(0);
-                        },
-                        child: const Icon(Icons.history_rounded,
-                            color: Colors.white, size: 28),
-                      ),
+                      if (_history.isNotEmpty)
+                        BouncingButton(
+                          onTap: () {
+                            _openPhoto(0);
+                          },
+                          child: const Icon(Icons.history_rounded,
+                              color: Colors.white, size: 28),
+                        ),
+
+                      const Spacer(),
 
                       // Flip Camera Icon
                       BouncingButton(
