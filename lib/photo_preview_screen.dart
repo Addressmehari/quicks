@@ -166,26 +166,27 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
             ),
 
             // Delete Button (Bottom Left)
-            Positioned(
-              bottom: 40,
-              left: 24,
-              child: GestureDetector(
-                onTap: _deleteCurrentPhoto,
-                child: SquircleClip(
-                  n: 3.2,
-                  child: Container(
-                    width: 56,
-                    height: 56,
-                    color: Colors.red.withOpacity(0.12),
-                    child: const Icon(
-                      Icons.delete_outline_rounded,
-                      color: Colors.redAccent,
-                      size: 24,
+            if (!_isGridView)
+              Positioned(
+                bottom: 40,
+                left: 24,
+                child: GestureDetector(
+                  onTap: _deleteCurrentPhoto,
+                  child: SquircleClip(
+                    n: 3.2,
+                    child: Container(
+                      width: 56,
+                      height: 56,
+                      color: Colors.red.withOpacity(0.12),
+                      child: const Icon(
+                        Icons.delete_outline_rounded,
+                        color: Colors.redAccent,
+                        size: 24,
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
 
             // Toggle Button (Bottom Right)
             Positioned(
@@ -243,37 +244,38 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
                   _isGridView = false;
                 });
               },
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(isSelected ? 0.5 : 0.3),
-                      blurRadius: isSelected ? 15 : 10,
-                      spreadRadius: isSelected ? 2 : 0,
-                    ),
-                  ],
-                ),
-                child: SquircleClip(
-                  n: 3.2,
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      Image.file(
-                        File(photo.path),
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          color: Colors.grey[900],
-                          child: const Icon(Icons.broken_image, color: Colors.white30),
-                        ),
+              child: AnimatedScale(
+                scale: isSelected ? 1.05 : 1.0,
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOutBack,
+                child: Container(
+                  decoration: BoxDecoration(
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(isSelected ? 0.4 : 0.2),
+                        blurRadius: isSelected ? 20 : 10,
+                        spreadRadius: isSelected ? 4 : 0,
                       ),
-                      if (isSelected)
-                        Container(
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.white, width: 3),
+                    ],
+                  ),
+                  child: SquircleClip(
+                    n: 3.2,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Image.file(
+                          File(photo.path),
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            color: Colors.grey[900],
+                            child: const Icon(Icons.broken_image, color: Colors.white30),
                           ),
                         ),
-                    ],
+                        // Dimming for unselected images
+                        if (!isSelected)
+                          Container(color: Colors.black.withOpacity(0.4)),
+                      ],
+                    ),
                   ),
                 ),
               ),

@@ -351,47 +351,6 @@ class _CameraScreenState extends State<CameraScreen>
                   ),
                 ),
 
-                const SizedBox(height: 24),
-
-                // ── Friends Selector ──────────────────────────────────
-                BouncingButton(
-                  onTap: () {
-                    // Open selector logic
-                  },
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1C1C1E),
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.05),
-                        width: 0.5,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.people_alt_rounded,
-                            color: Color(0xFF0A84FF), size: 18),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'Friends',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: -0.2,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Icon(Icons.keyboard_arrow_down_rounded,
-                            color: Colors.white.withOpacity(0.4), size: 18),
-                      ],
-                    ),
-                  ),
-                ),
-
                 const Spacer(flex: 2),
 
                 // ── Bottom Icons Row ──────────────────────────────────
