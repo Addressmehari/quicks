@@ -100,7 +100,7 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
                         ],
                       ),
                       child: SquircleClip(
-                        n: 4.0,
+                        n: 3.2,
                         child: Image.file(
                           File(photo.path),
                           fit: BoxFit.cover,

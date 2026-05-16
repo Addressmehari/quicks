@@ -242,7 +242,7 @@ class _CameraScreenState extends State<CameraScreen>
                         child: CustomPaint(
                           painter: _SquircleShadowPainter(),
                           child: SquircleClip(
-                            n: 4.0,
+                            n: 3.2,
                             child: SizedBox(
                               width: viewfinderSize,
                               height: viewfinderSize,
@@ -519,7 +519,7 @@ class _HistoryTile extends StatelessWidget {
           Hero(
             tag: photo.path,
             child: SquircleClip(
-              n: 4.0,
+              n: 3.2,
               child: Image.file(
                 File(photo.path),
                 width: tileSize,
@@ -538,7 +538,7 @@ class _HistoryTile extends StatelessWidget {
             left: 0,
             right: 0,
             child: ClipPath(
-              clipper: SquircleClipper(n: 4.0),
+              clipper: SquircleClipper(n: 3.2),
               child: Container(
                 padding: const EdgeInsets.fromLTRB(4, 18, 4, 6),
                 decoration: BoxDecoration(
@@ -574,7 +574,7 @@ class _HistoryTile extends StatelessWidget {
 class _SquircleShadowPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final path = buildSquirclePath(size, n: 4.0);
+    final path = buildSquirclePath(size, n: 3.2);
     final paint = Paint()
       ..color = Colors.white.withOpacity(0.06)
       ..maskFilter = const MaskFilter.blur(BlurStyle.outer, 20);
