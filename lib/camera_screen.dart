@@ -12,20 +12,20 @@ import 'photo_preview_screen.dart';
 /// Top-level function for compute() — runs in a background isolate.
 /// Decodes [bytes], bakes orientation, center-crops to a square, and returns JPEG bytes.
 Uint8List _cropToSquare(Uint8List bytes) {
-  img.Image? decoded = img.decodeImage(bytes);
+  img.Image? decoded = img.decodeJpg(bytes);
   if (decoded == null) return bytes;
 
-  // Crucial: Bake orientation so width/height match what we see
+  // Bake orientation
   decoded = img.bakeOrientation(decoded);
 
-  // Pick the shorter dimension as the square side
-  final int side = decoded.width < decoded.height ? decoded.width : decoded.height;
-  // Center the crop
+  final int side =
+      decoded.width < decoded.height ? decoded.width : decoded.height;
   final int x = (decoded.width - side) ~/ 2;
   final int y = (decoded.height - side) ~/ 2;
 
-  final img.Image square = img.copyCrop(decoded, x: x, y: y, width: side, height: side);
-  return Uint8List.fromList(img.encodeJpg(square, quality: 90));
+  final img.Image square =
+      img.copyCrop(decoded, x: x, y: y, width: side, height: side);
+  return Uint8List.fromList(img.encodeJpg(square, quality: 70));
 }
 
 class CapturedPhoto {
@@ -99,7 +99,7 @@ class _CameraScreenState extends State<CameraScreen>
   Future<void> _startCamera(CameraDescription camera) async {
     _controller = CameraController(
       camera,
-      ResolutionPreset.high,
+      ResolutionPreset.medium,
       enableAudio: false,
       imageFormatGroup: ImageFormatGroup.jpeg,
     );
@@ -137,13 +137,8 @@ class _CameraScreenState extends State<CameraScreen>
       final fileName = 'instant_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final savedPath = p.join(dir.path, fileName);
 
-      // Read raw bytes first
-      final Uint8List rawBytes = await photo.readAsBytes();
-
-      // Run the heavy crop work on a background isolate
-      final Uint8List croppedBytes = await compute(_cropToSquare, rawBytes);
-
-      await File(savedPath).writeAsBytes(croppedBytes);
+      // Fast copy to permanent storage so we can show it immediately
+      await File(photo.path).copy(savedPath);
 
       final captured = CapturedPhoto(
         path: savedPath,
@@ -156,9 +151,24 @@ class _CameraScreenState extends State<CameraScreen>
       });
 
       _newPhotoAnimController.forward(from: 0);
+
+      // Perform the heavy cropping in the background without awaiting it here
+      _processPhotoInBackground(savedPath);
     } catch (e) {
       debugPrint('Capture error: $e');
       setState(() => _isCapturing = false);
+    }
+  }
+
+  /// Processes the photo (cropping to square) in a background isolate.
+  Future<void> _processPhotoInBackground(String path) async {
+    try {
+      final bytes = await File(path).readAsBytes();
+      final croppedBytes = await compute(_cropToSquare, bytes);
+      await File(path).writeAsBytes(croppedBytes);
+      debugPrint('Background cropping complete for: $path');
+    } catch (e) {
+      debugPrint('Background processing error: $e');
     }
   }
 
