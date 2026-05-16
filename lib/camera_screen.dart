@@ -215,15 +215,8 @@ class _CameraScreenState extends State<CameraScreen>
                   padding:
                       const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                   child: Row(
-                    children: [
-                      GestureDetector(
-                        onTap: () {
-                          // Close or reset logic
-                        },
-                        child: const Icon(Icons.close_rounded,
-                            color: Colors.white, size: 28),
-                      ),
-                      const Spacer(),
+                    children: const [
+                      Spacer(),
                     ],
                   ),
                 ),
@@ -260,7 +253,7 @@ class _CameraScreenState extends State<CameraScreen>
                 const Spacer(flex: 2),
 
                 // ── Capture Button ─────────────────────────────────────
-                GestureDetector(
+                BouncingButton(
                   onTap: _capturePhoto,
                   child: Container(
                     padding: const EdgeInsets.all(4),
@@ -283,36 +276,41 @@ class _CameraScreenState extends State<CameraScreen>
                 const SizedBox(height: 24),
 
                 // ── Friends Selector ──────────────────────────────────
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1C1C1E),
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.05),
-                      width: 0.5,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.people_alt_rounded,
-                          color: Color(0xFF0A84FF), size: 18),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Friends',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: -0.2,
-                        ),
+                BouncingButton(
+                  onTap: () {
+                    // Open selector logic
+                  },
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1C1C1E),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.05),
+                        width: 0.5,
                       ),
-                      const SizedBox(width: 4),
-                      Icon(Icons.keyboard_arrow_down_rounded,
-                          color: Colors.white.withOpacity(0.4), size: 18),
-                    ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.people_alt_rounded,
+                            color: Color(0xFF0A84FF), size: 18),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Friends',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: -0.2,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(Icons.keyboard_arrow_down_rounded,
+                            color: Colors.white.withOpacity(0.4), size: 18),
+                      ],
+                    ),
                   ),
                 ),
 
@@ -325,16 +323,16 @@ class _CameraScreenState extends State<CameraScreen>
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       // History Icon
-                      GestureDetector(
+                      BouncingButton(
                         onTap: () {
                           if (_history.isNotEmpty) _openPhoto(0);
                         },
                         child: const Icon(Icons.history_rounded,
                             color: Colors.white, size: 28),
                       ),
-                      
+
                       // Flip Camera Icon
-                      GestureDetector(
+                      BouncingButton(
                         onTap: _flipCamera,
                         child: const Icon(Icons.cached_rounded,
                             color: Colors.white, size: 28),
@@ -583,4 +581,56 @@ class _SquircleShadowPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_SquircleShadowPainter oldDelegate) => false;
+}
+
+/// A wrapper that adds a subtle bounce/pop effect on tap.
+class BouncingButton extends StatefulWidget {
+  final Widget child;
+  final VoidCallback onTap;
+
+  const BouncingButton({super.key, required this.child, required this.onTap});
+
+  @override
+  State<BouncingButton> createState() => _BouncingButtonState();
+}
+
+class _BouncingButtonState extends State<BouncingButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 100),
+    );
+    _scale = Tween<double>(begin: 1.0, end: 0.92).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => _controller.forward(),
+      onTapUp: (_) {
+        _controller.reverse();
+        widget.onTap();
+      },
+      onTapCancel: () => _controller.reverse(),
+      behavior: HitTestBehavior.opaque,
+      child: ScaleTransition(
+        scale: _scale,
+        child: widget.child,
+      ),
+    );
+  }
 }
