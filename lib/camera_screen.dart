@@ -205,146 +205,144 @@ class _CameraScreenState extends State<CameraScreen>
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
-        child: Column(
+        child: Stack(
           children: [
-            // ── Top Bar ──────────────────────────────────────────────
-            Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-              child: Row(
-                children: [
-                  const Text(
-                    'instants',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  const Spacer(),
-                  if (_cameras.length > 1)
-                    GestureDetector(
-                      onTap: _flipCamera,
-                      child: Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.12),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.flip_camera_ios_rounded,
-                            color: Colors.white, size: 20),
+            // ── Main Content ──────────────────────────────────────────
+            Column(
+              children: [
+                // ── Top Bar (Close button) ─────────────────────────────
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  child: Row(
+                    children: [
+                      GestureDetector(
+                        onTap: () {
+                          // Close or reset logic
+                        },
+                        child: const Icon(Icons.close_rounded,
+                            color: Colors.white, size: 28),
                       ),
-                    ),
-                ],
-              ),
-            ),
+                      const Spacer(),
+                    ],
+                  ),
+                ),
 
-            const SizedBox(height: 8),
+                const Spacer(flex: 1),
 
-            // ── Viewfinder (squircle) ────────────────────────────────
-            AnimatedBuilder(
-              animation: _shutterAnim,
-              builder: (_, __) => Transform.scale(
-                scale: _shutterAnim.value,
-                child: SizedBox(
-                  width: viewfinderSize,
-                  height: viewfinderSize,
-                  child: CustomPaint(
-                    painter: _SquircleShadowPainter(),
-                    child: SquircleClip(
-                      n: 4.0,
+                // ── Viewfinder (squircle) ─────────────────────────────
+                AnimatedBuilder(
+                  animation: _shutterAnim,
+                  builder: (_, __) => Transform.scale(
+                    scale: _shutterAnim.value,
+                    child: Center(
                       child: SizedBox(
                         width: viewfinderSize,
                         height: viewfinderSize,
-                        child: _isCameraReady && _controller != null
-                            ? _buildCameraPreview(viewfinderSize)
-                            : _buildCameraPlaceholder(),
+                        child: CustomPaint(
+                          painter: _SquircleShadowPainter(),
+                          child: SquircleClip(
+                            n: 4.0,
+                            child: SizedBox(
+                              width: viewfinderSize,
+                              height: viewfinderSize,
+                              child: _isCameraReady && _controller != null
+                                  ? _buildCameraPreview(viewfinderSize)
+                                  : _buildCameraPlaceholder(),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            ),
 
-            const SizedBox(height: 28),
+                const Spacer(flex: 2),
 
-            // ── Capture Button Row ────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 48),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Last Photo Thumbnail
-                  GestureDetector(
-                    onTap: () => _history.isNotEmpty ? _openPhoto(0) : null,
-                    child: Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.1),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white24, width: 1.5),
-                      ),
-                      child: _history.isNotEmpty
-                          ? SquircleClip(
-                              n: 4.0,
-                              child: Image.file(
-                                File(_history.first.path),
-                                fit: BoxFit.cover,
-                              ),
-                            )
-                          : const Icon(Icons.photo_library_outlined,
-                              color: Colors.white30, size: 20),
+                // ── Capture Button ─────────────────────────────────────
+                GestureDetector(
+                  onTap: _capturePhoto,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 3),
                     ),
-                  ),
-
-                  // Main Capture Button
-                  GestureDetector(
-                    onTap: _capturePhoto,
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 120),
-                      width: _isCapturing ? 68 : 72,
-                      height: _isCapturing ? 68 : 72,
-                      decoration: BoxDecoration(
+                      width: _isCapturing ? 64 : 70,
+                      height: _isCapturing ? 64 : 70,
+                      decoration: const BoxDecoration(
                         shape: BoxShape.circle,
                         color: Colors.white,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.white.withOpacity(0.25),
-                            blurRadius: 20,
-                            spreadRadius: 2,
-                          ),
-                        ],
-                      ),
-                      child: Center(
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 120),
-                          width: _isCapturing ? 26 : 30,
-                          height: _isCapturing ? 26 : 30,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.black, width: 2.5),
-                          ),
-                        ),
                       ),
                     ),
                   ),
+                ),
 
-                  // Empty spacer for balance or Flip Button
-                  const SizedBox(width: 48),
-                ],
-              ),
-            ),
+                const SizedBox(height: 24),
 
-            const SizedBox(height: 28),
+                // ── Friends Selector ──────────────────────────────────
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1C1C1E),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.05),
+                      width: 0.5,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.people_alt_rounded,
+                          color: Color(0xFF0A84FF), size: 18),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Friends',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(Icons.keyboard_arrow_down_rounded,
+                          color: Colors.white.withOpacity(0.4), size: 18),
+                    ],
+                  ),
+                ),
 
-            // ── History Strip ─────────────────────────────────────────
-            Expanded(
-              child: _history.isEmpty
-                  ? _buildEmptyHistory()
-                  : _buildHistoryStrip(),
+                const Spacer(flex: 2),
+
+                // ── Bottom Icons Row ──────────────────────────────────
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // History Icon
+                      GestureDetector(
+                        onTap: () {
+                          if (_history.isNotEmpty) _openPhoto(0);
+                        },
+                        child: const Icon(Icons.history_rounded,
+                            color: Colors.white, size: 28),
+                      ),
+                      
+                      // Flip Camera Icon
+                      GestureDetector(
+                        onTap: _flipCamera,
+                        child: const Icon(Icons.cached_rounded,
+                            color: Colors.white, size: 28),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ],
         ),
