@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:ui';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'camera_screen.dart';
@@ -20,19 +21,16 @@ class PhotoPreviewScreen extends StatefulWidget {
 }
 
 class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
-  late PageController _pageController;
   late int _currentIndex;
 
   @override
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
-    _pageController = PageController(initialPage: widget.initialIndex);
   }
 
   @override
   void dispose() {
-    _pageController.dispose();
     super.dispose();
   }
 
@@ -71,49 +69,9 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
               ),
             ),
 
-            // PageView for photos
-            PageView.builder(
-              controller: _pageController,
-              itemCount: widget.photos.length,
-              physics: const BouncingScrollPhysics(),
-              onPageChanged: (index) {
-                setState(() {
-                  _currentIndex = index;
-                });
-              },
-              itemBuilder: (context, index) {
-                final photo = widget.photos[index];
-                return Center(
-                  child: Hero(
-                    tag: photo.path,
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 20),
-                      width: previewSize,
-                      height: previewSize,
-                      decoration: BoxDecoration(
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.5),
-                            blurRadius: 30,
-                            spreadRadius: 5,
-                          ),
-                        ],
-                      ),
-                      child: SquircleClip(
-                        n: 3.2,
-                        child: Image.file(
-                          File(photo.path),
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => const Center(
-                            child: Icon(Icons.broken_image,
-                                color: Colors.white30, size: 64),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              },
+            // Stacked Photo Gallery
+            Center(
+              child: _buildPhotoStack(previewSize),
             ),
 
             // Back button + timestamp (Top)
@@ -199,5 +157,88 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildPhotoStack(double size) {
+    return GestureDetector(
+      onTap: _nextPhoto,
+      behavior: HitTestBehavior.opaque,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.center,
+        children: [
+          // Render current + next 3 photos (Back to Front)
+          for (int i = 3; i >= 0; i--)
+            if (_currentIndex + i < widget.photos.length)
+              _buildPhotoCard(_currentIndex + i, size, i),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPhotoCard(int index, double size, int depth) {
+    final photo = widget.photos[index];
+    final isTop = depth == 0;
+    
+    // Balanced "fan" distribution instead of pure random to avoid lopsidedness
+    // Alternates sides based on the photo index
+    final double side = (index % 2 == 0) ? 1.0 : -1.0;
+    
+    final rotation = isTop ? 0.0 : (0.12 * side * depth); 
+    final xOffset = isTop ? 0.0 : (24.0 * side * depth); 
+    final yOffset = isTop ? 0.0 : (-32.0 * depth);
+    
+    final scale = isTop ? 1.0 : (1.0 - (0.06 * depth));
+
+    return AnimatedContainer(
+      key: ValueKey(photo.path),
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeOutBack,
+      transformAlignment: Alignment.center,
+      transform: Matrix4.identity()
+        ..translate(xOffset, yOffset)
+        ..rotateZ(rotation)
+        ..scale(scale),
+      child: Hero(
+        tag: isTop ? photo.path : "bg_${photo.path}_$index",
+        child: Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(isTop ? 0.45 : 0.3),
+                blurRadius: isTop ? 40 : 20,
+                spreadRadius: isTop ? 10 : 0,
+              ),
+            ],
+          ),
+          child: SquircleClip(
+            n: 3.2,
+            child: Image.file(
+              File(photo.path),
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(
+                color: Colors.grey[900],
+                child: const Icon(Icons.broken_image, color: Colors.white30, size: 64),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _nextPhoto() {
+    if (widget.photos.length <= 1) return;
+    
+    HapticFeedback.mediumImpact();
+    setState(() {
+      if (_currentIndex < widget.photos.length - 1) {
+        _currentIndex++;
+      } else {
+        _currentIndex = 0;
+      }
+    });
   }
 }
