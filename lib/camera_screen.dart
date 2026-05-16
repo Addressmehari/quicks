@@ -1,6 +1,8 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:image/image.dart' as img;
 import 'package:path_provider/path_provider.dart';
 import 'squircle_clipper.dart';
 import 'package:path/path.dart' as p;
@@ -112,11 +114,28 @@ class _CameraScreenState extends State<CameraScreen>
     try {
       final XFile photo = await _controller!.takePicture();
 
-      // Save to app documents directory
+      // Crop to 1:1 square (center-crop) then save
       final dir = await getApplicationDocumentsDirectory();
       final fileName = 'instant_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final savedPath = p.join(dir.path, fileName);
-      await File(photo.path).copy(savedPath);
+
+      final Uint8List rawBytes = await photo.readAsBytes();
+      final img.Image? decoded = img.decodeImage(rawBytes);
+      if (decoded != null) {
+        final int side = decoded.width < decoded.height
+            ? decoded.width
+            : decoded.height;
+        final int x = (decoded.width - side) ~/ 2;
+        final int y = (decoded.height - side) ~/ 2;
+        final img.Image cropped = img.copyCrop(
+          decoded,
+          x: x, y: y,
+          width: side, height: side,
+        );
+        await File(savedPath).writeAsBytes(img.encodeJpg(cropped, quality: 92));
+      } else {
+        await File(photo.path).copy(savedPath);
+      }
 
       final captured = CapturedPhoto(
         path: savedPath,
@@ -277,38 +296,29 @@ class _CameraScreenState extends State<CameraScreen>
   }
 
   Widget _buildCameraPreview(double size) {
-    final double aspect = _controller!.value.aspectRatio; // width / height
+    final double rawAspect = _controller!.value.aspectRatio; // always landscape ratio from sensor
 
-    // CameraPreview has an internal AspectRatio widget.
-    // We must constrain only ONE axis so the camera can set its own height/width
-    // from its aspect ratio. The overflowing axis is clipped by ClipRect → square.
-    if (aspect >= 1.0) {
-      // Landscape camera: constrain height → width overflows to the sides
-      return ClipRect(
-        child: OverflowBox(
-          alignment: Alignment.center,
-          maxWidth: double.infinity,
-          maxHeight: size,
-          child: SizedBox(
-            height: size,
-            child: CameraPreview(_controller!),
+    // value.aspectRatio is ALWAYS reported as landscape (width/height of sensor).
+    // e.g. 16:9 → 1.778, 4:3 → 1.333
+    // For portrait display we need the INVERSE: 9:16 → 0.5625
+    final double portraitAspect = rawAspect > 1.0 ? 1.0 / rawAspect : rawAspect;
+
+    // Use buildPreview() (raw Texture) instead of CameraPreview to bypass
+    // the internal AspectRatio widget which causes distortion.
+    // We manually apply the correct portrait aspect ratio, then scale up
+    // so the width fills the square and excess height is clipped.
+    return ClipRect(
+      child: Center(
+        child: Transform.scale(
+          // scale = 1/portraitAspect → makes width = S, height overflows → ClipRect clips
+          scale: 1.0 / portraitAspect,
+          child: AspectRatio(
+            aspectRatio: portraitAspect,
+            child: _controller!.buildPreview(),
           ),
         ),
-      );
-    } else {
-      // Portrait camera (most phones): constrain width → height overflows top/bottom
-      return ClipRect(
-        child: OverflowBox(
-          alignment: Alignment.center,
-          maxWidth: size,
-          maxHeight: double.infinity,
-          child: SizedBox(
-            width: size,
-            child: CameraPreview(_controller!),
-          ),
-        ),
-      );
-    }
+      ),
+    );
   }
 
   Widget _buildCameraPlaceholder() {
