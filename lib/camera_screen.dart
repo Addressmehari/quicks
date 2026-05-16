@@ -60,6 +60,7 @@ class _CameraScreenState extends State<CameraScreen>
   bool _isCameraReady = false;
   bool _isCapturing = false;
   int _currentCameraIndex = 0;
+  bool _isGridViewPreference = false;
 
   final List<CapturedPhoto> _history = [];
 
@@ -104,12 +105,19 @@ class _CameraScreenState extends State<CameraScreen>
       final file = File(p.join(dir.path, 'history.json'));
       if (await file.exists()) {
         final content = await file.readAsString();
-        final List<dynamic> jsonList = jsonDecode(content);
-        final List<CapturedPhoto> loadedHistory = [];
+        final data = jsonDecode(content);
+        
+        List<dynamic> jsonList = [];
+        if (data is Map) {
+          _isGridViewPreference = data['isGridView'] ?? false;
+          jsonList = data['history'] ?? [];
+        } else if (data is List) {
+          jsonList = data;
+        }
 
+        final List<CapturedPhoto> loadedHistory = [];
         for (var item in jsonList) {
           final photo = CapturedPhoto.fromJson(item);
-          // Only add if the file actually exists on disk
           if (await File(photo.path).exists()) {
             loadedHistory.add(photo);
           }
@@ -129,8 +137,13 @@ class _CameraScreenState extends State<CameraScreen>
     try {
       final dir = await getApplicationDocumentsDirectory();
       final file = File(p.join(dir.path, 'history.json'));
-      final jsonList = _history.map((photo) => photo.toJson()).toList();
-      await file.writeAsString(jsonEncode(jsonList));
+      
+      final data = {
+        'isGridView': _isGridViewPreference,
+        'history': _history.map((photo) => photo.toJson()).toList(),
+      };
+      
+      await file.writeAsString(jsonEncode(data));
     } catch (e) {
       debugPrint('Save history error: $e');
     }
@@ -225,12 +238,13 @@ class _CameraScreenState extends State<CameraScreen>
   }
 
   Future<void> _openPhoto(int index) async {
-    final deleted = await Navigator.push(
+    final result = await Navigator.push(
       context,
       PageRouteBuilder(
         pageBuilder: (_, __, ___) => PhotoPreviewScreen(
           photos: _history,
           initialIndex: index,
+          isGridView: _isGridViewPreference,
         ),
         transitionsBuilder: (_, anim, __, child) => FadeTransition(
           opacity: anim,
@@ -240,8 +254,14 @@ class _CameraScreenState extends State<CameraScreen>
       ),
     );
 
-    // If something was deleted, we need to persist the change
-    if (deleted == true) {
+    // Update preference if returned
+    if (result is Map) {
+      if (result.containsKey('isGridView')) {
+        _isGridViewPreference = result['isGridView'];
+      }
+      
+      // If something was deleted, we need to persist the change
+      // Even if nothing was deleted, we save the new isGridViewPreference
       _saveHistory();
       setState(() {});
     }

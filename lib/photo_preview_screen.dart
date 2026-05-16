@@ -9,11 +9,13 @@ import 'squircle_clipper.dart';
 class PhotoPreviewScreen extends StatefulWidget {
   final List<CapturedPhoto> photos;
   final int initialIndex;
+  final bool isGridView;
 
   const PhotoPreviewScreen({
     super.key,
     required this.photos,
     required this.initialIndex,
+    this.isGridView = false,
   });
 
   @override
@@ -28,6 +30,7 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
+    _isGridView = widget.isGridView;
   }
 
   @override
@@ -59,7 +62,10 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
           children: [
             // Tap background to dismiss
             GestureDetector(
-              onTap: () => Navigator.pop(context, _currentIndex),
+              onTap: () => Navigator.pop(context, {
+                'index': _currentIndex,
+                'isGridView': _isGridView,
+              }),
               child: ClipRect(
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
@@ -137,7 +143,10 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
                     Row(
                       children: [
                         GestureDetector(
-                          onTap: () => Navigator.pop(context, _currentIndex),
+                          onTap: () => Navigator.pop(context, {
+                            'index': _currentIndex,
+                            'isGridView': _isGridView,
+                          }),
                           child: Container(
                             width: 44,
                             height: 44,
@@ -379,7 +388,7 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
         widget.photos.removeAt(_currentIndex);
         
         if (widget.photos.isEmpty) {
-          Navigator.pop(context, true); // true = something was deleted
+          Navigator.pop(context, {'deleted': true, 'isGridView': _isGridView}); 
         } else {
           // Adjust index if we deleted the last item
           if (_currentIndex >= widget.photos.length) {
