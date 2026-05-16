@@ -122,37 +122,7 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
               ),
             ),
 
-            // Delete button (Bottom)
-            Positioned(
-              bottom: 40,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: GestureDetector(
-                  onTap: () {
-                    // In a real app, we'd delete the file and update the state
-                    // For now, let's just pop with a signal or message
-                    Navigator.pop(context, -1); // -1 means deleted
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.15),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Colors.red.withOpacity(0.3),
-                        width: 1,
-                      ),
-                    ),
-                    child: const Icon(
-                      Icons.delete_outline_rounded,
-                      color: Colors.redAccent,
-                      size: 26,
-                    ),
-                  ),
-                ),
-              ),
-            ),
+
           ],
         ),
       ),
