@@ -184,11 +184,11 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
     // Alternates sides based on the photo index
     final double side = (index % 2 == 0) ? 1.0 : -1.0;
     
-    final rotation = isTop ? 0.0 : (0.12 * side * depth); 
-    final xOffset = isTop ? 0.0 : (24.0 * side * depth); 
-    final yOffset = isTop ? 0.0 : (-32.0 * depth);
+    final rotation = isTop ? 0.0 : (0.08 * side * depth); 
+    final xOffset = isTop ? 0.0 : (18.0 * side * depth); 
+    final yOffset = isTop ? 0.0 : (-28.0 * depth);
     
-    final scale = isTop ? 1.0 : (1.0 - (0.06 * depth));
+    final scale = isTop ? 1.0 : (1.0 - (0.08 * depth));
 
     return AnimatedContainer(
       key: ValueKey(photo.path),
