@@ -162,11 +162,14 @@ class _CameraScreenState extends State<CameraScreen>
     }
   }
 
-  void _openPhoto(CapturedPhoto photo) {
+  void _openPhoto(int index) {
     Navigator.push(
       context,
       PageRouteBuilder(
-        pageBuilder: (_, __, ___) => PhotoPreviewScreen(photo: photo),
+        pageBuilder: (_, __, ___) => PhotoPreviewScreen(
+          photos: _history,
+          initialIndex: index,
+        ),
         transitionsBuilder: (_, anim, __, child) => FadeTransition(
           opacity: anim,
           child: child,
@@ -257,35 +260,71 @@ class _CameraScreenState extends State<CameraScreen>
 
             const SizedBox(height: 28),
 
-            // ── Capture Button ────────────────────────────────────────
-            GestureDetector(
-              onTap: _capturePhoto,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 120),
-                width: _isCapturing ? 68 : 72,
-                height: _isCapturing ? 68 : 72,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.white.withOpacity(0.25),
-                      blurRadius: 20,
-                      spreadRadius: 2,
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 120),
-                    width: _isCapturing ? 26 : 30,
-                    height: _isCapturing ? 26 : 30,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.black, width: 2.5),
+            // ── Capture Button Row ────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 48),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Last Photo Thumbnail
+                  GestureDetector(
+                    onTap: () => _history.isNotEmpty ? _openPhoto(0) : null,
+                    child: Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white24, width: 1.5),
+                      ),
+                      child: _history.isNotEmpty
+                          ? SquircleClip(
+                              n: 4.0,
+                              child: Image.file(
+                                File(_history.first.path),
+                                fit: BoxFit.cover,
+                              ),
+                            )
+                          : const Icon(Icons.photo_library_outlined,
+                              color: Colors.white30, size: 20),
                     ),
                   ),
-                ),
+
+                  // Main Capture Button
+                  GestureDetector(
+                    onTap: _capturePhoto,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 120),
+                      width: _isCapturing ? 68 : 72,
+                      height: _isCapturing ? 68 : 72,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.white.withOpacity(0.25),
+                            blurRadius: 20,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 120),
+                          width: _isCapturing ? 26 : 30,
+                          height: _isCapturing ? 26 : 30,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.black, width: 2.5),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Empty spacer for balance or Flip Button
+                  const SizedBox(width: 48),
+                ],
               ),
             ),
 
@@ -418,7 +457,7 @@ class _CameraScreenState extends State<CameraScreen>
               Widget tile = Align(
                 alignment: Alignment.centerLeft,
                 child: GestureDetector(
-                  onTap: () => _openPhoto(photo),
+                  onTap: () => _openPhoto(index),
                   child: _HistoryTile(photo: photo),
                 ),
               );
@@ -469,16 +508,19 @@ class _HistoryTile extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           // Square image → squircle mask
-          SquircleClip(
-            n: 4.0,
-            child: Image.file(
-              File(photo.path),
-              width: tileSize,
-              height: tileSize,
-              fit: BoxFit.cover, // center-crops the 1:1 image into squircle
-              errorBuilder: (_, __, ___) => Container(
-                color: Colors.grey[800],
-                child: const Icon(Icons.broken_image, color: Colors.white30),
+          Hero(
+            tag: photo.path,
+            child: SquircleClip(
+              n: 4.0,
+              child: Image.file(
+                File(photo.path),
+                width: tileSize,
+                height: tileSize,
+                fit: BoxFit.cover, // center-crops the 1:1 image into squircle
+                errorBuilder: (_, __, ___) => Container(
+                  color: Colors.grey[800],
+                  child: const Icon(Icons.broken_image, color: Colors.white30),
+                ),
               ),
             ),
           ),
