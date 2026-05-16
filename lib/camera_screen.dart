@@ -1,12 +1,32 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:camera/camera.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
 import 'package:path_provider/path_provider.dart';
 import 'squircle_clipper.dart';
 import 'package:path/path.dart' as p;
 import 'photo_preview_screen.dart';
+
+/// Top-level function for compute() — runs in a background isolate.
+/// Decodes [bytes], bakes orientation, center-crops to a square, and returns JPEG bytes.
+Uint8List _cropToSquare(Uint8List bytes) {
+  img.Image? decoded = img.decodeImage(bytes);
+  if (decoded == null) return bytes;
+
+  // Crucial: Bake orientation so width/height match what we see
+  decoded = img.bakeOrientation(decoded);
+
+  // Pick the shorter dimension as the square side
+  final int side = decoded.width < decoded.height ? decoded.width : decoded.height;
+  // Center the crop
+  final int x = (decoded.width - side) ~/ 2;
+  final int y = (decoded.height - side) ~/ 2;
+
+  final img.Image square = img.copyCrop(decoded, x: x, y: y, width: side, height: side);
+  return Uint8List.fromList(img.encodeJpg(square, quality: 90));
+}
 
 class CapturedPhoto {
   final String path;
@@ -113,29 +133,17 @@ class _CameraScreenState extends State<CameraScreen>
 
     try {
       final XFile photo = await _controller!.takePicture();
-
-      // Crop to 1:1 square (center-crop) then save
       final dir = await getApplicationDocumentsDirectory();
       final fileName = 'instant_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final savedPath = p.join(dir.path, fileName);
 
+      // Read raw bytes first
       final Uint8List rawBytes = await photo.readAsBytes();
-      final img.Image? decoded = img.decodeImage(rawBytes);
-      if (decoded != null) {
-        final int side = decoded.width < decoded.height
-            ? decoded.width
-            : decoded.height;
-        final int x = (decoded.width - side) ~/ 2;
-        final int y = (decoded.height - side) ~/ 2;
-        final img.Image cropped = img.copyCrop(
-          decoded,
-          x: x, y: y,
-          width: side, height: side,
-        );
-        await File(savedPath).writeAsBytes(img.encodeJpg(cropped, quality: 92));
-      } else {
-        await File(photo.path).copy(savedPath);
-      }
+
+      // Run the heavy crop work on a background isolate
+      final Uint8List croppedBytes = await compute(_cropToSquare, rawBytes);
+
+      await File(savedPath).writeAsBytes(croppedBytes);
 
       final captured = CapturedPhoto(
         path: savedPath,
@@ -397,7 +405,8 @@ class _CameraScreenState extends State<CameraScreen>
           ),
         ),
         const SizedBox(height: 12),
-        Expanded(
+        SizedBox(
+          height: 110, // Fixed height for the strip
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.only(left: 20, right: 8),
@@ -406,9 +415,12 @@ class _CameraScreenState extends State<CameraScreen>
               final photo = _history[index];
               final isNewest = index == 0;
 
-              Widget tile = GestureDetector(
-                onTap: () => _openPhoto(photo),
-                child: _HistoryTile(photo: photo),
+              Widget tile = Align(
+                alignment: Alignment.centerLeft,
+                child: GestureDetector(
+                  onTap: () => _openPhoto(photo),
+                  child: _HistoryTile(photo: photo),
+                ),
               );
 
               if (isNewest) {

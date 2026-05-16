@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'camera_screen.dart';
+import 'squircle_clipper.dart';
 
 class PhotoPreviewScreen extends StatelessWidget {
   final CapturedPhoto photo;
@@ -20,6 +21,9 @@ class PhotoPreviewScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final previewSize = size.width * 0.92;
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
@@ -27,14 +31,23 @@ class PhotoPreviewScreen extends StatelessWidget {
         body: Stack(
           fit: StackFit.expand,
           children: [
-            // Full-screen photo
-            Hero(
-              tag: photo.path,
-              child: Image.file(
-                File(photo.path),
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const Center(
-                  child: Icon(Icons.broken_image, color: Colors.white30, size: 64),
+            // Center squircle photo
+            Center(
+              child: Hero(
+                tag: photo.path,
+                child: SizedBox(
+                  width: previewSize,
+                  height: previewSize,
+                  child: SquircleClip(
+                    n: 4.0,
+                    child: Image.file(
+                      File(photo.path),
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const Center(
+                        child: Icon(Icons.broken_image, color: Colors.white30, size: 64),
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
