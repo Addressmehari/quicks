@@ -22,6 +22,7 @@ class PhotoPreviewScreen extends StatefulWidget {
 
 class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
   late int _currentIndex;
+  bool _isGridView = false;
 
   @override
   void initState() {
@@ -69,9 +70,25 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
               ),
             ),
 
-            // Stacked Photo Gallery
+            // Gallery View (Stack or Grid)
             Center(
-              child: _buildPhotoStack(previewSize),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 450),
+                switchInCurve: Curves.easeOutBack,
+                switchOutCurve: Curves.easeIn,
+                transitionBuilder: (Widget child, Animation<double> animation) {
+                  return FadeTransition(
+                    opacity: animation,
+                    child: ScaleTransition(
+                      scale: animation.drive(Tween(begin: 0.95, end: 1.0)),
+                      child: child,
+                    ),
+                  );
+                },
+                child: _isGridView 
+                    ? _buildPhotoGrid(context) 
+                    : _buildPhotoStack(previewSize),
+              ),
             ),
 
             // Back button + timestamp (Top)
@@ -122,26 +139,119 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
               ),
             ),
 
-
+            // Toggle Button (Bottom Right)
+            Positioned(
+              bottom: 40,
+              right: 24,
+              child: GestureDetector(
+                onTap: () {
+                  HapticFeedback.mediumImpact();
+                  setState(() => _isGridView = !_isGridView);
+                },
+                child: SquircleClip(
+                  n: 3.2,
+                  child: Container(
+                    width: 56,
+                    height: 56,
+                    color: Colors.white.withOpacity(0.15),
+                    child: Icon(
+                      _isGridView ? Icons.layers_rounded : Icons.grid_view_rounded,
+                      color: Colors.white,
+                      size: 26,
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
+  Widget _buildPhotoGrid(BuildContext context) {
+    return SafeArea(
+      key: const ValueKey('grid_view_container'),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 80, 24, 100),
+        child: GridView.builder(
+          itemCount: widget.photos.length,
+          physics: const BouncingScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
+            childAspectRatio: 1.0,
+          ),
+          itemBuilder: (context, index) {
+            final photo = widget.photos[index];
+            final isSelected = index == _currentIndex;
+            
+            return GestureDetector(
+              onTap: () {
+                HapticFeedback.lightImpact();
+                setState(() {
+                  _currentIndex = index;
+                  _isGridView = false;
+                });
+              },
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(isSelected ? 0.5 : 0.3),
+                      blurRadius: isSelected ? 15 : 10,
+                      spreadRadius: isSelected ? 2 : 0,
+                    ),
+                  ],
+                ),
+                child: SquircleClip(
+                  n: 3.2,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Image.file(
+                        File(photo.path),
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          color: Colors.grey[900],
+                          child: const Icon(Icons.broken_image, color: Colors.white30),
+                        ),
+                      ),
+                      if (isSelected)
+                        Container(
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.white, width: 3),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
   Widget _buildPhotoStack(double size) {
-    return GestureDetector(
-      onTap: _nextPhoto,
-      behavior: HitTestBehavior.opaque,
-      child: Stack(
-        clipBehavior: Clip.none,
-        alignment: Alignment.center,
-        children: [
-          // Render current + next 3 photos (Back to Front)
-          for (int i = 3; i >= 0; i--)
-            if (_currentIndex + i < widget.photos.length)
-              _buildPhotoCard(_currentIndex + i, size, i),
-        ],
+    return KeyedSubtree(
+      key: const ValueKey('stack_view'),
+      child: GestureDetector(
+        onTap: _nextPhoto,
+        behavior: HitTestBehavior.opaque,
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.center,
+          children: [
+            // Render current + next 3 photos (Back to Front)
+            for (int i = 3; i >= 0; i--)
+              if (_currentIndex + i < widget.photos.length)
+                _buildPhotoCard(_currentIndex + i, size, i),
+          ],
+        ),
       ),
     );
   }
