@@ -70,60 +70,61 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
               ),
             ),
 
-            // Gallery View (Stack or Grid) + Timestamp
-            Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 450),
-                    switchInCurve: Curves.easeOutBack,
-                    switchOutCurve: Curves.easeIn,
-                    transitionBuilder: (Widget child, Animation<double> animation) {
-                      return FadeTransition(
-                        opacity: animation,
-                        child: ScaleTransition(
-                          scale: animation.drive(Tween(begin: 0.95, end: 1.0)),
-                          child: child,
-                        ),
-                      );
-                    },
-                    child: _isGridView 
-                        ? _buildPhotoGrid(context) 
-                        : _buildPhotoStack(previewSize),
+            // Gallery View (Stack or Grid)
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 450),
+              switchInCurve: Curves.easeOutBack,
+              switchOutCurve: Curves.easeIn,
+              transitionBuilder: (Widget child, Animation<double> animation) {
+                return FadeTransition(
+                  opacity: animation,
+                  child: ScaleTransition(
+                    scale: animation.drive(Tween(begin: 0.95, end: 1.0)),
+                    child: child,
                   ),
-                  if (!_isGridView && widget.photos.isNotEmpty) ...[
-                    const SizedBox(height: 32),
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 300),
-                      transitionBuilder: (child, animation) => ScaleTransition(
-                        scale: animation.drive(Tween(begin: 0.9, end: 1.0)),
-                        child: FadeTransition(opacity: animation, child: child),
-                      ),
-                      child: Container(
-                        key: ValueKey('timestamp_$_currentIndex'),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.08),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          _formatDateTime(
-                              widget.photos[_currentIndex].capturedAt),
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.3,
-                          ),
-                        ),
+                );
+              },
+              child: _isGridView 
+                  ? _buildPhotoGrid(context) 
+                  : Center(
+                      key: const ValueKey('stack_view_container'),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _buildPhotoStack(previewSize),
+                          if (widget.photos.isNotEmpty) ...[
+                            const SizedBox(height: 32),
+                            AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 300),
+                              transitionBuilder: (child, animation) => ScaleTransition(
+                                scale: animation.drive(Tween(begin: 0.9, end: 1.0)),
+                                child: FadeTransition(opacity: animation, child: child),
+                              ),
+                              child: Container(
+                                key: ValueKey('timestamp_$_currentIndex'),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 14, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.08),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  _formatDateTime(
+                                      widget.photos[_currentIndex].capturedAt),
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.3,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 80), // Shifting images up
+                        ],
                       ),
                     ),
-                  ],
-                  const SizedBox(height: 80), // Shifting images up
-                ],
-              ),
             ),
 
             // Back button + timestamp (Top)
