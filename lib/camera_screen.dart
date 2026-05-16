@@ -224,8 +224,8 @@ class _CameraScreenState extends State<CameraScreen>
     }
   }
 
-  void _openPhoto(int index) {
-    Navigator.push(
+  Future<void> _openPhoto(int index) async {
+    final deleted = await Navigator.push(
       context,
       PageRouteBuilder(
         pageBuilder: (_, __, ___) => PhotoPreviewScreen(
@@ -239,6 +239,12 @@ class _CameraScreenState extends State<CameraScreen>
         transitionDuration: const Duration(milliseconds: 250),
       ),
     );
+
+    // If something was deleted, we need to persist the change
+    if (deleted == true) {
+      _saveHistory();
+      setState(() {});
+    }
   }
 
   @override

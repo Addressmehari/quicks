@@ -139,6 +139,28 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
               ),
             ),
 
+            // Delete Button (Bottom Left)
+            Positioned(
+              bottom: 40,
+              left: 24,
+              child: GestureDetector(
+                onTap: _deleteCurrentPhoto,
+                child: SquircleClip(
+                  n: 3.2,
+                  child: Container(
+                    width: 56,
+                    height: 56,
+                    color: Colors.red.withOpacity(0.12),
+                    child: const Icon(
+                      Icons.delete_outline_rounded,
+                      color: Colors.redAccent,
+                      size: 24,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
             // Toggle Button (Bottom Right)
             Positioned(
               bottom: 40,
@@ -320,5 +342,39 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
         _currentIndex = 0;
       }
     });
+  }
+
+  void _deleteCurrentPhoto() async {
+    if (widget.photos.isEmpty) return;
+    
+    final photo = widget.photos[_currentIndex];
+    HapticFeedback.heavyImpact();
+
+    try {
+      // 1. Delete from Physical Storage
+      final file = File(photo.path);
+      if (await file.exists()) {
+        await file.delete();
+      }
+
+      // 2. Remove from List and Update UI
+      setState(() {
+        widget.photos.removeAt(_currentIndex);
+        
+        if (widget.photos.isEmpty) {
+          Navigator.pop(context, true); // true = something was deleted
+        } else {
+          // Adjust index if we deleted the last item
+          if (_currentIndex >= widget.photos.length) {
+            _currentIndex = widget.photos.length - 1;
+          }
+        }
+      });
+      
+      // Notify parent about the change if we are still here
+      // (Optional: we could pop here too, but staying is better if there are more photos)
+    } catch (e) {
+      debugPrint('Delete error: $e');
+    }
   }
 }
