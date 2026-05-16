@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 import 'dart:typed_data';
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
@@ -33,6 +34,16 @@ class CapturedPhoto {
   final DateTime capturedAt;
 
   CapturedPhoto({required this.path, required this.capturedAt});
+
+  Map<String, dynamic> toJson() => {
+        'path': path,
+        'capturedAt': capturedAt.toIso8601String(),
+      };
+
+  factory CapturedPhoto.fromJson(Map<String, dynamic> json) => CapturedPhoto(
+        path: json['path'],
+        capturedAt: DateTime.parse(json['capturedAt']),
+      );
 }
 
 class CameraScreen extends StatefulWidget {
@@ -84,6 +95,45 @@ class _CameraScreenState extends State<CameraScreen>
     );
 
     _initCamera();
+    _loadHistory();
+  }
+
+  Future<void> _loadHistory() async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final file = File(p.join(dir.path, 'history.json'));
+      if (await file.exists()) {
+        final content = await file.readAsString();
+        final List<dynamic> jsonList = jsonDecode(content);
+        final List<CapturedPhoto> loadedHistory = [];
+
+        for (var item in jsonList) {
+          final photo = CapturedPhoto.fromJson(item);
+          // Only add if the file actually exists on disk
+          if (await File(photo.path).exists()) {
+            loadedHistory.add(photo);
+          }
+        }
+
+        setState(() {
+          _history.clear();
+          _history.addAll(loadedHistory);
+        });
+      }
+    } catch (e) {
+      debugPrint('Load history error: $e');
+    }
+  }
+
+  Future<void> _saveHistory() async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final file = File(p.join(dir.path, 'history.json'));
+      final jsonList = _history.map((photo) => photo.toJson()).toList();
+      await file.writeAsString(jsonEncode(jsonList));
+    } catch (e) {
+      debugPrint('Save history error: $e');
+    }
   }
 
   Future<void> _initCamera() async {
@@ -149,6 +199,8 @@ class _CameraScreenState extends State<CameraScreen>
         _history.insert(0, captured);
         _isCapturing = false;
       });
+
+      _saveHistory();
 
       _newPhotoAnimController.forward(from: 0);
 
