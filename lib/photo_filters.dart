@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'dart:ui';
+import 'dart:math' as math;
+import 'dart:typed_data';
+
 class PhotoFilters {
   static const String day = 'day';
+  static const String noisyGrains = 'noisy_grains';
 
   static String getFormattedDay(DateTime dt) {
     const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -41,6 +46,16 @@ class PhotoFilterOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (filter == null) return const SizedBox.shrink();
+
+    if (filter == PhotoFilters.noisyGrains) {
+      return Positioned.fill(
+        child: IgnorePointer(
+          child: CustomPaint(
+            painter: GrainPainter(isLarge: size == FilterOverlaySize.large),
+          ),
+        ),
+      );
+    }
 
     if (filter == PhotoFilters.day) {
       final isLarge = size == FilterOverlaySize.large;
@@ -94,4 +109,43 @@ class PhotoFilterOverlay extends StatelessWidget {
     
     return const SizedBox.shrink();
   }
+}
+
+class GrainPainter extends CustomPainter {
+  final bool isLarge;
+  GrainPainter({required this.isLarge});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // 1. Draw CRT TV Scanlines
+    final scanlinePaint = Paint()
+      ..color = Colors.black.withOpacity(0.15)
+      ..style = PaintingStyle.fill;
+      
+    final double lineThickness = isLarge ? 2.0 : 1.0;
+    final double lineSpacing = isLarge ? 5.0 : 2.5;
+
+    for (double y = 0; y < size.height; y += lineSpacing) {
+      canvas.drawRect(Rect.fromLTWH(0, y, size.width, lineThickness), scanlinePaint);
+    }
+
+    // 2. Draw subtle TV static/noise
+    final random = math.Random(1337); 
+    final noisePaint = Paint()
+      ..color = Colors.white.withOpacity(0.05)
+      ..strokeWidth = isLarge ? 1.5 : 1.0;
+
+    final int pointCount = isLarge ? 30000 : 6000;
+    final Float32List noisePoints = Float32List(pointCount * 2);
+
+    for (int i = 0; i < pointCount * 2; i += 2) {
+      noisePoints[i] = random.nextDouble() * size.width;
+      noisePoints[i+1] = random.nextDouble() * size.height;
+    }
+
+    canvas.drawRawPoints(PointMode.points, noisePoints, noisePaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant GrainPainter oldDelegate) => oldDelegate.isLarge != isLarge;
 }

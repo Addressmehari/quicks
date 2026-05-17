@@ -317,7 +317,13 @@ class _CameraScreenState extends State<CameraScreen>
                       onTap: () {
                         HapticFeedback.lightImpact();
                         setState(() {
-                          _activeFilter = _activeFilter == 'day' ? null : 'day';
+                          if (_activeFilter == null) {
+                            _activeFilter = PhotoFilters.day;
+                          } else if (_activeFilter == PhotoFilters.day) {
+                            _activeFilter = PhotoFilters.noisyGrains;
+                          } else {
+                            _activeFilter = null;
+                          }
                         });
                       },
                       child: Center(
