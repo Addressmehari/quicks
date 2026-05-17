@@ -4,11 +4,13 @@ import 'dart:typed_data';
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image/image.dart' as img;
 import 'package:path_provider/path_provider.dart';
 import 'squircle_clipper.dart';
 import 'package:path/path.dart' as p;
 import 'photo_preview_screen.dart';
+import 'photo_filters.dart';
 
 /// Top-level function for compute() — runs in a background isolate.
 /// Decodes [bytes], bakes orientation, center-crops to a square, and returns JPEG bytes.
@@ -32,17 +34,20 @@ Uint8List _cropToSquare(Uint8List bytes) {
 class CapturedPhoto {
   final String path;
   final DateTime capturedAt;
+  final String? filter;
 
-  CapturedPhoto({required this.path, required this.capturedAt});
+  CapturedPhoto({required this.path, required this.capturedAt, this.filter});
 
   Map<String, dynamic> toJson() => {
         'path': path,
         'capturedAt': capturedAt.toIso8601String(),
+        'filter': filter,
       };
 
   factory CapturedPhoto.fromJson(Map<String, dynamic> json) => CapturedPhoto(
         path: json['path'],
         capturedAt: DateTime.parse(json['capturedAt']),
+        filter: json['filter'],
       );
 }
 
@@ -61,6 +66,7 @@ class _CameraScreenState extends State<CameraScreen>
   bool _isCapturing = false;
   int _currentCameraIndex = 0;
   bool _isGridViewPreference = false;
+  String? _activeFilter;
 
   final List<CapturedPhoto> _history = [];
 
@@ -206,6 +212,7 @@ class _CameraScreenState extends State<CameraScreen>
       final captured = CapturedPhoto(
         path: savedPath,
         capturedAt: DateTime.now(),
+        filter: _activeFilter,
       );
 
       setState(() {
@@ -306,20 +313,34 @@ class _CameraScreenState extends State<CameraScreen>
                   animation: _shutterAnim,
                   builder: (_, __) => Transform.scale(
                     scale: _shutterAnim.value,
-                    child: Center(
-                      child: SizedBox(
-                        width: viewfinderSize,
-                        height: viewfinderSize,
-                        child: CustomPaint(
-                          painter: _SquircleShadowPainter(),
-                          child: SquircleClip(
-                            n: 3.2,
-                            child: SizedBox(
-                              width: viewfinderSize,
-                              height: viewfinderSize,
-                              child: _isCameraReady && _controller != null
-                                  ? _buildCameraPreview(viewfinderSize)
-                                  : _buildCameraPlaceholder(),
+                    child: GestureDetector(
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        setState(() {
+                          _activeFilter = _activeFilter == 'day' ? null : 'day';
+                        });
+                      },
+                      child: Center(
+                        child: SizedBox(
+                          width: viewfinderSize,
+                          height: viewfinderSize,
+                          child: CustomPaint(
+                            painter: _SquircleShadowPainter(),
+                            child: SquircleClip(
+                              n: 3.2,
+                              child: Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  _isCameraReady && _controller != null
+                                      ? _buildCameraPreview(viewfinderSize)
+                                      : _buildCameraPlaceholder(),
+                                  PhotoFilterOverlay(
+                                    filter: _activeFilter,
+                                    date: DateTime.now(),
+                                    size: FilterOverlaySize.large,
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
@@ -541,6 +562,11 @@ class _HistoryTile extends StatelessWidget {
     return '$h:$m';
   }
 
+  String _getFormattedDay(DateTime dt) {
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    return days[dt.weekday - 1].toUpperCase();
+  }
+
   @override
   Widget build(BuildContext context) {
     const double tileSize = 90;
@@ -552,20 +578,30 @@ class _HistoryTile extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // Square image → squircle mask
           Hero(
             tag: photo.path,
             child: SquircleClip(
               n: 3.2,
-              child: Image.file(
-                File(photo.path),
-                width: tileSize,
-                height: tileSize,
-                fit: BoxFit.cover, // center-crops the 1:1 image into squircle
-                errorBuilder: (_, __, ___) => Container(
-                  color: Colors.grey[800],
-                  child: const Icon(Icons.broken_image, color: Colors.white30),
-                ),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Image.file(
+                    File(photo.path),
+                    width: tileSize,
+                    height: tileSize,
+                    fit: BoxFit.cover, // center-crops the 1:1 image into squircle
+                    errorBuilder: (_, __, ___) => Container(
+                      color: Colors.grey[800],
+                      child: const Icon(Icons.broken_image, color: Colors.white30),
+                    ),
+                  ),
+                  PhotoFilterOverlay(
+                    filter: photo.filter,
+                    date: photo.capturedAt,
+                    size: FilterOverlaySize.small,
+                    customBottomOffset: 24,
+                  ),
+                ],
               ),
             ),
           ),
