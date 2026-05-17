@@ -37,6 +37,13 @@ No uploads, no cloud sync, no social sharing features. Your data is yours alone,
 - **OS-Level Deletion:** Permanently delete photos from physical storage directly from the preview screen.
 - **Context-Aware Metadata:** Beautifully formatted, floating timestamps showing exactly when the moment was captured.
 
+### ✨ Photo Filters (FDK)
+- **Filter Development Kit:** A centralized, modular architecture for creating and managing custom photo overlays (`photo_filters.dart`).
+- **Dynamic Scaling:** Overlays automatically adapt their sizes, shadows, and densities between small thumbnails and large views.
+- **Current Filters:** 
+  - **Candy Crush Day:** A bubbly, vibrant day-of-the-week watermark using Google Fonts (`Chewy`), paired with an elegant timestamp.
+  - **Retro TV Scanlines:** A vintage CRT effect built with an ultra-efficient CustomPainter, generating dense scanlines and subtle static noise.
+
 ### 🎨 UI & Aesthetics
 - **Micro-animations:** Custom bouncing effects on buttons, smooth fade transitions, and scaling animations for a responsive, "alive" feel.
 - **Premium Dark Mode:** A deep, immersive dark theme that makes your photos pop.
@@ -51,6 +58,7 @@ No uploads, no cloud sync, no social sharing features. Your data is yours alone,
   - `camera` - For low-level device camera control.
   - `image` - For background image processing, cropping, and orientation fixing.
   - `path_provider` & `path` - For persistent local file storage and history JSON management.
+  - `google_fonts` - For dynamic, beautiful typography (e.g., the Candy Crush filter).
 
 ---
 
@@ -61,6 +69,7 @@ lib/
 ├── main.dart                  # App entry point and theme configuration
 ├── camera_screen.dart         # Main camera UI, history strip, and capture logic
 ├── photo_preview_screen.dart  # Stack & Grid gallery viewer with deletion & metadata
+├── photo_filters.dart         # Filter Development Kit (FDK) core, defining all overlays and painters
 └── squircle_clipper.dart      # Custom mathematical clipper for the signature squircle shape
 ```
 
@@ -106,8 +115,8 @@ lib/
 ## 🗺️ Roadmap (To-Dos)
 
 We have some exciting features planned for the future of Quicks:
-- [ ] **Custom Filters:** Implement stunning photo filters to give moments a unique vibe.
-- [ ] **Filter Development Kit (FDK):** Allow advanced users to create, tweak, and import their own custom filters.
+- [x] **Custom Filters:** Implement stunning photo filters to give moments a unique vibe.
+- [x] **Filter Development Kit (FDK):** Allow advanced users to create, tweak, and import their own custom filters.
 - [ ] **Memory Book Creation:** Automatically generate and export curated memory books as high-quality PDFs.
 
 ---
