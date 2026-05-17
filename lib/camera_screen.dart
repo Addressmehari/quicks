@@ -101,8 +101,12 @@ class _CameraScreenState extends State<CameraScreen>
           parent: _newPhotoAnimController, curve: Curves.easeOut),
     );
 
-    _initCamera();
-    _loadHistory();
+    // Defer heavy plugin initialization until after the first frame is rendered
+    // to significantly reduce the splash screen duration and time-to-first-frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initCamera();
+      _loadHistory();
+    });
   }
 
   Future<void> _loadHistory() async {
