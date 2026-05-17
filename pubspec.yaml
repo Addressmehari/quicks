@@ -39,6 +39,7 @@ dependencies:
   path: ^1.9.1
   camera_web: ^0.3.5+3
   image: ^4.8.0
+  google_fonts: ^6.1.0
 
 dev_dependencies:
   flutter_test:
