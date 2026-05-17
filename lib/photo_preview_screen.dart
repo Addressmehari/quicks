@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'camera_screen.dart';
 import 'squircle_clipper.dart';
+import 'photo_filters.dart';
 
 class PhotoPreviewScreen extends StatefulWidget {
   final List<CapturedPhoto> photos;
@@ -271,6 +272,12 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
                             child: const Icon(Icons.broken_image, color: Colors.white30),
                           ),
                         ),
+                        PhotoFilterOverlay(
+                          filter: photo.filter,
+                          date: photo.capturedAt,
+                          size: FilterOverlaySize.small,
+                          customBottomOffset: 12,
+                        ),
                         // Dimming for unselected images
                         if (!isSelected)
                           Container(color: Colors.black.withOpacity(0.4)),
@@ -345,13 +352,24 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
           ),
           child: SquircleClip(
             n: 3.2,
-            child: Image.file(
-              File(photo.path),
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
-                color: Colors.grey[900],
-                child: const Icon(Icons.broken_image, color: Colors.white30, size: 64),
-              ),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Image.file(
+                  File(photo.path),
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    color: Colors.grey[900],
+                    child: const Icon(Icons.broken_image, color: Colors.white30, size: 64),
+                  ),
+                ),
+                PhotoFilterOverlay(
+                  filter: photo.filter,
+                  date: photo.capturedAt,
+                  size: FilterOverlaySize.large,
+                  customBottomOffset: 32,
+                ),
+              ],
             ),
           ),
         ),
