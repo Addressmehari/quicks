@@ -28,7 +28,11 @@ Uint8List _cropToSquare(Uint8List bytes) {
 
   final img.Image square =
       img.copyCrop(decoded, x: x, y: y, width: side, height: side);
-  return Uint8List.fromList(img.encodeJpg(square, quality: 70));
+      
+  // Resize to a maximum of 1080x1080 to drastically reduce file size
+  final img.Image resized = img.copyResize(square, width: 1080, height: 1080);
+  
+  return Uint8List.fromList(img.encodeJpg(resized, quality: 70));
 }
 
 class CapturedPhoto {
