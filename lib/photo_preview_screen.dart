@@ -325,12 +325,6 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
                               child: const Icon(Icons.broken_image, color: Colors.white30),
                             ),
                           ),
-                          PhotoFilterOverlay(
-                            filter: photo.filter,
-                            date: photo.capturedAt,
-                            size: FilterOverlaySize.small,
-                            customBottomOffset: 12,
-                          ),
                           // Dimming for unselected images
                           if (!isSelected)
                             Container(color: Colors.black.withOpacity(0.4)),
@@ -428,12 +422,6 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
                     color: Colors.grey[900],
                     child: const Icon(Icons.broken_image, color: Colors.white30, size: 64),
                   ),
-                ),
-                PhotoFilterOverlay(
-                  filter: photo.filter,
-                  date: photo.capturedAt,
-                  size: FilterOverlaySize.large,
-                  customBottomOffset: 32,
                 ),
               ],
             ),
