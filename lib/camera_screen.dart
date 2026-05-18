@@ -368,7 +368,16 @@ class _CameraScreenState extends State<CameraScreen>
 
       if (pngBytes != null) {
         await File(path).writeAsBytes(pngBytes.buffer.asUint8List());
-        debugPrint('Baking filters complete for: $path');
+        
+        // Evict the raw unbaked image from Flutter's memory cache
+        // to force the UI to read the freshly baked filter image from disk!
+        await FileImage(File(path)).evict();
+        
+        debugPrint('Baking filters complete and cache evicted for: $path');
+        
+        if (mounted) {
+          setState(() {});
+        }
       }
     } catch (e) {
       debugPrint('Baking processing error: $e');
