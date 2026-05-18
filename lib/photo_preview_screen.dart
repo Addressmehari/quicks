@@ -49,6 +49,38 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
     return '${months[dt.month - 1]} ${dt.day} · $h:$m';
   }
 
+  String _getDateHeader(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final targetDate = DateTime(date.year, date.month, date.day);
+
+    if (targetDate == today) {
+      return 'Today';
+    } else if (targetDate == yesterday) {
+      return 'Yesterday';
+    } else {
+      final months = [
+        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      ];
+      return '${months[date.month - 1]} ${date.day}, ${date.year}';
+    }
+  }
+
+  Map<String, List<Map<String, dynamic>>> _groupPhotosByDate() {
+    final Map<String, List<Map<String, dynamic>>> grouped = {};
+    for (int i = 0; i < widget.photos.length; i++) {
+      final photo = widget.photos[i];
+      final dateStr = _getDateHeader(photo.capturedAt);
+      if (!grouped.containsKey(dateStr)) {
+        grouped[dateStr] = [];
+      }
+      grouped[dateStr]!.add({'index': i, 'photo': photo});
+    }
+    return grouped;
+  }
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
@@ -220,74 +252,108 @@ class _PhotoPreviewScreenState extends State<PhotoPreviewScreen> {
   }
 
   Widget _buildPhotoGrid(BuildContext context) {
-    return SafeArea(
-      key: const ValueKey('grid_view_container'),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 80, 24, 100),
-        child: GridView.builder(
-          itemCount: widget.photos.length,
-          physics: const BouncingScrollPhysics(),
+    final groupedPhotos = _groupPhotosByDate();
+    final slivers = <Widget>[];
+
+    for (final entry in groupedPhotos.entries) {
+      final dateStr = entry.key;
+      final photos = entry.value;
+
+      slivers.add(
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.only(top: 24, bottom: 12),
+            child: Text(
+              dateStr,
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.9),
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      slivers.add(
+        SliverGrid(
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 3,
             crossAxisSpacing: 16,
             mainAxisSpacing: 16,
             childAspectRatio: 1.0,
           ),
-          itemBuilder: (context, index) {
-            final photo = widget.photos[index];
-            final isSelected = index == _currentIndex;
-            
-            return GestureDetector(
-              onTap: () {
-                HapticFeedback.lightImpact();
-                setState(() {
-                  _currentIndex = index;
-                  _isGridView = false;
-                });
-              },
-              child: AnimatedScale(
-                scale: isSelected ? 1.05 : 1.0,
-                duration: const Duration(milliseconds: 250),
-                curve: Curves.easeOutBack,
-                child: Container(
-                  decoration: BoxDecoration(
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(isSelected ? 0.4 : 0.2),
-                        blurRadius: isSelected ? 20 : 10,
-                        spreadRadius: isSelected ? 4 : 0,
-                      ),
-                    ],
-                  ),
-                  child: SquircleClip(
-                    n: 3.2,
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        Image.file(
-                          File(photo.path),
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(
-                            color: Colors.grey[900],
-                            child: const Icon(Icons.broken_image, color: Colors.white30),
-                          ),
+          delegate: SliverChildBuilderDelegate(
+            (context, index) {
+              final originalIndex = photos[index]['index'] as int;
+              final photo = photos[index]['photo'] as CapturedPhoto;
+              final isSelected = originalIndex == _currentIndex;
+              
+              return GestureDetector(
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  setState(() {
+                    _currentIndex = originalIndex;
+                    _isGridView = false;
+                  });
+                },
+                child: AnimatedScale(
+                  scale: isSelected ? 1.05 : 1.0,
+                  duration: const Duration(milliseconds: 250),
+                  curve: Curves.easeOutBack,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(isSelected ? 0.4 : 0.2),
+                          blurRadius: isSelected ? 20 : 10,
+                          spreadRadius: isSelected ? 4 : 0,
                         ),
-                        PhotoFilterOverlay(
-                          filter: photo.filter,
-                          date: photo.capturedAt,
-                          size: FilterOverlaySize.small,
-                          customBottomOffset: 12,
-                        ),
-                        // Dimming for unselected images
-                        if (!isSelected)
-                          Container(color: Colors.black.withOpacity(0.4)),
                       ],
+                    ),
+                    child: SquircleClip(
+                      n: 3.2,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Image.file(
+                            File(photo.path),
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(
+                              color: Colors.grey[900],
+                              child: const Icon(Icons.broken_image, color: Colors.white30),
+                            ),
+                          ),
+                          PhotoFilterOverlay(
+                            filter: photo.filter,
+                            date: photo.capturedAt,
+                            size: FilterOverlaySize.small,
+                            customBottomOffset: 12,
+                          ),
+                          // Dimming for unselected images
+                          if (!isSelected)
+                            Container(color: Colors.black.withOpacity(0.4)),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+            childCount: photos.length,
+          ),
+        ),
+      );
+    }
+
+    return SafeArea(
+      key: const ValueKey('grid_view_container'),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 60, 24, 100),
+        child: CustomScrollView(
+          physics: const BouncingScrollPhysics(),
+          slivers: slivers,
         ),
       ),
     );
