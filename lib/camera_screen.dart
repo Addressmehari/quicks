@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'dart:convert';
 import 'dart:typed_data';
+import 'dart:ui' as ui;
+import 'dart:math' as math;
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -11,6 +13,7 @@ import 'squircle_clipper.dart';
 import 'package:path/path.dart' as p;
 import 'photo_preview_screen.dart';
 import 'photo_filters.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 /// Top-level function for compute() — runs in a background isolate.
 /// Decodes [bytes], bakes orientation, center-crops to a square, and returns JPEG bytes.
@@ -217,9 +220,10 @@ class _CameraScreenState extends State<CameraScreen>
       // Fast copy to permanent storage so we can show it immediately
       await File(photo.path).copy(savedPath);
 
+      final captureTime = DateTime.now();
       final captured = CapturedPhoto(
         path: savedPath,
-        capturedAt: DateTime.now(),
+        capturedAt: captureTime,
         filter: _activeFilter,
       );
 
@@ -232,23 +236,142 @@ class _CameraScreenState extends State<CameraScreen>
 
       _newPhotoAnimController.forward(from: 0);
 
-      // Perform the heavy cropping in the background without awaiting it here
-      _processPhotoInBackground(savedPath);
+      // Perform the heavy cropping and filter baking asynchronously without blocking the UI
+      _processPhotoInBackground(savedPath, _activeFilter, captureTime);
     } catch (e) {
       debugPrint('Capture error: $e');
       setState(() => _isCapturing = false);
     }
   }
 
-  /// Processes the photo (cropping to square) in a background isolate.
-  Future<void> _processPhotoInBackground(String path) async {
+  /// Processes the photo (cropping to square and baking filters) using dart:ui.
+  Future<void> _processPhotoInBackground(String path, String? filter, DateTime capturedAt) async {
     try {
       final bytes = await File(path).readAsBytes();
-      final croppedBytes = await compute(_cropToSquare, bytes);
-      await File(path).writeAsBytes(croppedBytes);
-      debugPrint('Background cropping complete for: $path');
+      
+      // Decode image using native engine (respects orientation EXIF automatically)
+      final ui.Codec codec = await ui.instantiateImageCodec(bytes);
+      final ui.FrameInfo frame = await codec.getNextFrame();
+      final ui.Image rawImage = frame.image;
+
+      final int width = rawImage.width;
+      final int height = rawImage.height;
+      
+      // Setup standard 1080x1080 canvas
+      const double targetSize = 1080;
+      final ui.PictureRecorder recorder = ui.PictureRecorder();
+      final ui.Canvas canvas = ui.Canvas(recorder, const Rect.fromLTWH(0, 0, targetSize, targetSize));
+      
+      // Calculate crop coordinates
+      final double side = width < height ? width.toDouble() : height.toDouble();
+      final double sx = (width - side) / 2;
+      final double sy = (height - side) / 2;
+      
+      final srcRect = Rect.fromLTWH(sx, sy, side, side);
+      final destRect = const Rect.fromLTWH(0, 0, targetSize, targetSize);
+      
+      canvas.drawImageRect(rawImage, srcRect, destRect, Paint()..isAntiAlias = true);
+      
+      // Draw filters directly into image pixels
+      if (filter == PhotoFilters.noisyGrains) {
+        // 1. Draw scanlines (Scaled by 3x for 1080x1080 resolution)
+        final scanlinePaint = Paint()
+          ..color = Colors.black.withOpacity(0.18)
+          ..style = PaintingStyle.fill;
+          
+        const double lineThickness = 6.0; // 3x scaling for 1080px canvas (was 2px logical)
+        const double lineSpacing = 15.0;  // 3x scaling for 1080px canvas (was 5px logical)
+
+        for (double y = 0; y < targetSize; y += lineSpacing) {
+          canvas.drawRect(Rect.fromLTWH(0, y, targetSize, lineThickness), scanlinePaint);
+        }
+
+        // 2. Draw static/noise (Scaled for density and visibility at 1080x1080)
+        final random = math.Random(1337); 
+        final noisePaint = Paint()
+          ..color = Colors.white.withOpacity(0.08)
+          ..strokeWidth = 3.5; // Scaled up stroke width for 1080px
+
+        const int pointCount = 60000; // Increased count to preserve density
+        final Float32List noisePoints = Float32List(pointCount * 2);
+        for (int i = 0; i < pointCount * 2; i += 2) {
+          noisePoints[i] = random.nextDouble() * targetSize;
+          noisePoints[i + 1] = random.nextDouble() * targetSize;
+        }
+        canvas.drawRawPoints(ui.PointMode.points, noisePoints, noisePaint);
+      } else if (filter == PhotoFilters.day) {
+        // Draw day typography
+        final dayText = PhotoFilters.getFormattedDay(capturedAt);
+        final String? chewyFamily = GoogleFonts.chewy().fontFamily;
+
+        final dayPainter = TextPainter(
+          text: TextSpan(
+            text: dayText,
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.95),
+              fontSize: 36 * (targetSize / 360),
+              fontWeight: FontWeight.w400,
+              fontFamily: chewyFamily,
+              letterSpacing: 2.0 * (targetSize / 360),
+              shadows: const [
+                Shadow(
+                  color: Colors.black54,
+                  blurRadius: 12,
+                  offset: Offset(0, 3),
+                ),
+              ],
+            ),
+          ),
+          textDirection: TextDirection.ltr,
+          textAlign: TextAlign.center,
+        );
+        dayPainter.layout(maxWidth: targetSize);
+        
+        final dateText = PhotoFilters.getFormattedDate(capturedAt);
+        final datePainter = TextPainter(
+          text: TextSpan(
+            text: dateText,
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.85),
+              fontSize: 12 * (targetSize / 360),
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.5,
+              shadows: const [
+                Shadow(
+                  color: Colors.black54,
+                  blurRadius: 8,
+                  offset: Offset(0, 1),
+                ),
+              ],
+            ),
+          ),
+          textDirection: TextDirection.ltr,
+          textAlign: TextAlign.center,
+        );
+        datePainter.layout(maxWidth: targetSize);
+        
+        final double bottomOffset = 32 * (targetSize / 360);
+        final double dayY = targetSize - bottomOffset - dayPainter.height - datePainter.height - 2;
+        final double dateY = targetSize - bottomOffset - datePainter.height;
+        
+        dayPainter.paint(canvas, Offset((targetSize - dayPainter.width) / 2, dayY));
+        datePainter.paint(canvas, Offset((targetSize - datePainter.width) / 2, dateY));
+      }
+
+      // Convert canvas back to image
+      final ui.Picture picture = recorder.endRecording();
+      final ui.Image processedImage = await picture.toImage(targetSize.toInt(), targetSize.toInt());
+      final ByteData? pngBytes = await processedImage.toByteData(format: ui.ImageByteFormat.png);
+      
+      rawImage.dispose();
+      processedImage.dispose();
+
+      if (pngBytes != null) {
+        await File(path).writeAsBytes(pngBytes.buffer.asUint8List());
+        debugPrint('Baking filters complete for: $path');
+      }
     } catch (e) {
-      debugPrint('Background processing error: $e');
+      debugPrint('Baking processing error: $e');
     }
   }
 
@@ -608,12 +731,6 @@ class _HistoryTile extends StatelessWidget {
                       color: Colors.grey[800],
                       child: const Icon(Icons.broken_image, color: Colors.white30),
                     ),
-                  ),
-                  PhotoFilterOverlay(
-                    filter: photo.filter,
-                    date: photo.capturedAt,
-                    size: FilterOverlaySize.small,
-                    customBottomOffset: 24,
                   ),
                 ],
               ),
