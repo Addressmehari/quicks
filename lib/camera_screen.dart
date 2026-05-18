@@ -14,6 +14,7 @@ import 'package:path/path.dart' as p;
 import 'photo_preview_screen.dart';
 import 'photo_filters.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:gal/gal.dart';
 
 /// Top-level function for compute() — runs in a background isolate.
 /// Decodes [bytes], bakes orientation, center-crops to a square, and returns JPEG bytes.
@@ -374,6 +375,14 @@ class _CameraScreenState extends State<CameraScreen>
         await FileImage(File(path)).evict();
         
         debugPrint('Baking filters complete and cache evicted for: $path');
+
+        // Save the freshly baked and filtered photo directly to the device's native gallery/camera roll
+        try {
+          await Gal.putImage(path, album: 'Quicks');
+          debugPrint('Successfully saved baked photo to native album "Quicks": $path');
+        } catch (e) {
+          debugPrint('Failed to save photo to native gallery: $e');
+        }
         
         if (mounted) {
           setState(() {});
