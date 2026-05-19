@@ -11,6 +11,8 @@
 
 ---
 
+
+
 ## ✨ Overview
 
 **Quicks** is a simple, beautiful replacement for modern camera apps, designed exclusively for **offline memory collection**. In a world driven by social media and oversharing, Quicks goes in the opposite direction: it is **fully private**.
